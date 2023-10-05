@@ -1,14 +1,13 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Sep 27 08:01:52 2022
-Transductive Survival Ranking
-@author: u1876024
-"""
+'''
+This is the code used to construct the experiments in the paper:
+A Transductive Approach to Survival Ranking for Cancer Risk Stratification
 
+This file is the TSR model, which applies transductive learning to achieve
+automatic subgrouping
+Transduction loss will not be calculated if the test set was omitted in the fit() function
+'''
 import torch
 import torch.optim as optim
-import matplotlib.pyplot as plt
 from lifelines.utils import concordance_index
 
 USE_CUDA = torch.cuda.is_available() 
@@ -24,27 +23,39 @@ def toNumpy(v):
         return v.detach().cpu().numpy()
     return v.detach().numpy()
 
-#print('Using CUDA:',USE_CUDA)
+def TransductiveLoss(z):
+    """
+        ----Calculates the transductive loss using test sample prediction----
+        Parameters
+        ----------
+        z : np array
+            Prediction scores of the test set
 
-def L2(z):
-    """
-    g = 5
-    zz = torch.zeros((2,len(z)))
-    zz[1] = z
-    az = (torch.logsumexp(-g*zz,0)+torch.logsumexp(g*zz,0))/g #smooth approximation of abs https://math.stackexchange.com/questions/728094/approximate-x-with-a-smooth-function
-    #az = torch.logsumexp(g*zz,0)*2/g-z-(2/g)*torch.log(torch.tensor(2)) #smooth approximation of abs 
-    zz[1] = 1-az
-    
-    closs= torch.logsumexp(g*zz,0)/g #approx of max(0,1-abs(z))
-    """
-    closs = torch.exp(-3*(z**2)) #original approximation used in the paper 
-    #closs = torch.exp(-0.5*(z**2)) #original approximation used in the paper "LARGE SCALE TRANSDUCTIVE SVMS"  by Collobert 2006    
-    #closs= torch.max(toTensor([0],requires_grad=False), 1 - torch.abs(z)) #max(0,1-abs(z))
+        Return
+        ----------
+        Transductive loss
+        """
+    closs = torch.exp(-3*(z**2)) 
     return closs
-# N is batch size; D_in is input dimension;
-# H is hidden dimension; D_out is output dimension.
+
 class TransductiveSurvivalRanker:
-    def __init__(self,model=None,lambda_w=0.01,lambda_u = 0.0,p=1,lr=1e-2,Tmax = 200):#,lambdaw=0.010,p=1,Tmax = 100,lr=1e-1
+    def __init__(self,model=None,lambda_w=0.1,lambda_u = 0.0,p=2,lr=1e-2,Tmax = 200):
+        """
+        ----Model initialization----
+        Parameters
+        ----------
+        lambda_w : float (default=0.1)
+                Controls the strength of the L_2 regularization and the average ranking loss 
+                for all comparable pairs in P(R).
+        lambda_u : float (default=0)
+                Controls the loss over the prediction scores of the samples in the test set.
+        p: int (default=2)
+                Specify the type of regularization 
+        lr : float (default=1e-2)
+                Learning rate
+        Tmax : int (default=200)
+                Max training epochs
+        """
         self.lambda_w = lambda_w
         self.lambda_u = lambda_u
         self.p = p
@@ -52,71 +63,119 @@ class TransductiveSurvivalRanker:
         self.lr = lr
         self.model = model
         
+        
     def fit(self,X_train,T_train,E_train,X_test = None):        
-        #from sklearn.preprocessing import MinMaxScaler
-        #self.MMS = MinMaxScaler().fit(T_train.reshape(-1, 1))#rescale y-values
-        #T_train = 1e-3+self.MMS.transform(T_train.reshape(-1, 1)).flatten()        
+       
+        """
+        ----Model fitting function----
+        Parameters
+        ----------
+        X_train : np array 
+                Covariates (normalized gene expressions) of the train set
+        T_train : np array
+                Time duration of samples in the training set
+        E_train : np array
+                Event indicators of samples in the training set 
+        X_test : np array (default=None)
+                Covariates (normalized gene expressions) of the test set                
+        
+        Return
+        ----------
+        Instance of the trained model
+        
+        """
+        #Handle data as tensors
         x = toTensor(X_train)
         if X_test is not None:
             X_test = toTensor(X_test)
         y = toTensor(T_train)
         e = toTensor(E_train)
+        
+        #NN input and output size
         N,D_in = x.shape        
         H, D_out = D_in, 1
+        
+        #Create a new model if none exist using a linear nn with tanh activation
         if self.model is None:                    
             self.model = torch.nn.Sequential( 
                 torch.nn.Linear(H, D_out,bias=True),
-                #torch.nn.ReLU(),
-                #torch.nn.Linear(H, D_out,bias=True),
-                #torch.nn.Linear(int(H/2), D_out,bias=True),
                 torch.nn.Tanh()
             )
         model = self.model
         model=cuda(model)
         learning_rate = self.lr
+        
+        #initialize optimizer
         optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay = 0.0)
-        TT = self.Tmax  
+        epochs = self.Tmax  
         lambda_w = self.lambda_w 
         p = self.p
-        L = []
-        dT = T_train[:, None] - T_train[None, :] #dT_ij = T_i-T_j
+        L = [] #collects losses for all epochs
+        
+        #Create pairs of samples where E_j=1 AND T_i > T_j
+        dT = T_train[:, None] - T_train[None, :] 
         dP = (dT>0)*E_train
-        dP = toTensor(dP,requires_grad=False)>0 # P ={(i,j)|T_i>T_j ^ E_j=1}
-        dY = (y.unsqueeze(1) - y)[dP] #y.unsqueeze(1) - y is the same as dT?
-        #import pdb;pdb.set_trace()
+        dP = toTensor(dP,requires_grad=False)>0
+
         self.bias = 0.0
         loss_uv = 0.0
-        for t in (range(TT)):
+        for t in (range(epochs)):
+            
+            #Get predictions on the training set and calculate Ranking Loss and add it to the overall loss
             y_pred = model(x).flatten()
-            #self.bias = torch.mean(y_pred)
             dZ = (y_pred.unsqueeze(1) - y_pred)[dP]  
-            loss = torch.mean(torch.max(toTensor([0],requires_grad=False),1.0-dZ)) #hinge loss
+            loss = torch.mean(torch.max(toTensor([0],requires_grad=False),1.0-dZ))
+            
+            #Get predictions on the test set and calculate Transductive Loss and add it to the overall loss
             if X_test is not None and self.lambda_u > 0:
-                y_tt = model(X_test).flatten()
-                #self.bias = (torch.sum(y_pred)+torch.sum(y_tt))/(len(y_pred)+len(y_tt))#torch.mean(y_tt)#
-                #y_tt = y_tt-self.bias
-                #y_pred = y_pred - self.bias
-                loss_u = torch.mean(L2(y_tt))#(torch.sum(L2(y_tt))+torch.sum(L2(y_pred)))/(len(y_pred)+len(y_tt))#
-                loss+=self.lambda_u*loss_u
+                test_predictions = model(X_test).flatten()
+                loss_u = torch.mean(TransductiveLoss(test_predictions))
+                transductive_loss=self.lambda_u*loss_u
+                loss+=transductive_loss
                 loss_uv = loss_u.item()
-            #import pdb;pdb.set_trace();
-            #ww = torch.cat([w_.view(-1) for w_ in model[0].parameters()]) #weights of input
-            ww = model[0].weight.view(-1) #only input layer weighths (excl bias from regularization)
-            loss+=lambda_w*torch.norm(ww, p)**p #regularize
+
+            w = model[0].weight.view(-1) #only input layer weights (exclude bias from regularization)
+            
+            #Calculate the regularization term and add it to the overall loss
+            regularization_term=lambda_w*torch.norm(w, p)**p 
+            loss+=regularization_term
             L.append([loss.item(),loss_uv])
+            
+            # Calculate the gradient during the backward pass and perform a single optimization step (update weights w)
             model.zero_grad()
-            loss.backward() # Calculate the gradient during the backward pass
-            optimizer.step() #Performs a single optimization step (parameter update)
-        ww = model[0].weight.view(-1)#torch.cat([w_.view(-1) for w_ in model[0].parameters()])
-        self.ww = ww
+            loss.backward() 
+            optimizer.step() 
+                       
+        w = model[0].weight.view(-1)
+        self.w = w
         self.L = L
         self.model = model
         return self
+    
+    
     def decision_function(self,x):
+        """
+         ----Predictor function----
+         Parameters
+         ----------
+         x : np array
+             Test samples covariates
+          
+        Return
+        ----------
+        Survival prediction scores  
+          
+         """
         x = toTensor(x)
         return toNumpy(self.model(x)-self.bias).flatten()
+        
     def getW(self):
-        return toNumpy(self.ww/torch.linalg.norm(self.ww,ord=1))
-    #By Ethar
-    def score(self,X,Time,Event):
-        return concordance_index(Time, X, Event)
+        """
+         ----gets the optimized weights of the model----
+        Return
+        ----------
+        np array of all weights of the model
+          
+         """
+        
+        return toNumpy(self.w/torch.linalg.norm(self.w,ord=1))
