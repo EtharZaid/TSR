@@ -9,7 +9,7 @@ A Transductive Approach to Survival Ranking for Cancer Risk Stratification, subm
 ## Introduction
 How can we stratify patients into subgroups based on their expected survival in a purely data-driven manner? Identifying cancer patients at higher risk is crucial in planning personalized treatment to improve patient survival outcomes. The main challenge with existing approaches is the underlying complexity of handling censoring in the survival data and manually setting a precise threshold to stratify patients into risk groups. In this paper, a Transductive Survival Ranking (TSR) model for patient risk stratification is proposed. The model handles samples in pairs to make use of instances with censored survival information. It incorporates unlabeled test samples in the training process to maximize the margin between their predicted survival scores resulting in automatic patient stratification into subgroups without the need for any additional post-processing or manual threshold selection. The model was evaluated on several datasets with varying sets of covariates, and all stratification were significant (p <<0.05) with high concordance indices of up to 0.78 in Disease Specific Survival and 0.75 in Overall Survival.
 
-<img src="concept1.png" alt="Concept Diagram"/>
+<img src="concept1.pdf" alt="Concept Diagram"/>
 
 ## Dependencies
 
