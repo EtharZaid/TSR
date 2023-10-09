@@ -13,18 +13,30 @@ How can we stratify patients into subgroups based on their expected survival in 
 
 ## Dependencies
 
-lifelines==0.27.7  
+lifelines==0.27.7 
+
 matplotlib==3.5.3
+
 numpy==1.21.6
+
 pandas==1.3.5
+
 pynverse==0.1.4.6
+
 pysurvival==0.1.2
+
 scikit-learn==1.0.2
+
 scipy==1.7.3
+
 seaborn==0.12.2
+
 torch==1.13.1
+
 tqdm==4.65.0
+
 umap==0.1.1
+
 wrapt==1.15.0
 
 Python Version== 3.7.16
@@ -32,6 +44,7 @@ Python Version== 3.7.16
 ## Usage
 ### Step 1. Data download
 A sample file for BRCA is included in the Dataset folder with a separate file for survival information.
-This was downloaded from TCGA on cBioPortal (https://www.cbioportal.org/).
+This was downloaded from TCGA on cBioPortal (https://www.cbioportal.org/), the gene expressions can be directly downloaded with z-score normalization.
 
-### Step 2. Data processing
+### Step 2. Bootstrap Run
+In [TSR_main](TSR_main.py), the transductive approach can be run directly 
