@@ -42,9 +42,30 @@ wrapt==1.15.0
 Python Version== 3.7.16
 
 ## Usage
-### Step 1. Data download
+### Data download
 A sample file for BRCA is included in the Dataset folder with a separate file for survival information.
 This was downloaded from TCGA on cBioPortal (https://www.cbioportal.org/), the gene expressions can be directly downloaded with z-score normalization.
 
-### Step 2. Bootstrap Run
-In [TSR_main](TSR_main.py), the transductive approach can be run directly 
+### Single Run
+In [TSR_main](TSR_main.py) (to be updated), you will be able to run the transductive survival ranking to stratify samples into low vs. high risk groups:
+
+It will calcualte (refer to the paper for more details):
+
+- C-index
+
+- p-Value
+
+And will plot the following:
+
+- Distribution of prediction scores
+
+- Kaplan-Meier Curves
+
+- Heatmap of gene expressions of the stratified groups
+
+### Bootstrap Run
+In [TSR_Bootstrap](TSR_BootstrapRun.py), you can perform bootstrap runs and it will calculate the mean c-index, standard deviation and combined p-value.
+
+
+
+
