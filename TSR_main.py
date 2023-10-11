@@ -39,7 +39,7 @@ dataset.dropna(inplace=True)  # Remove rows with no values for event/time
 dataset.reset_index(inplace=True, drop=True)
 
 
-# %%
+#%%
 
 #Prepare required parameters
 
@@ -52,87 +52,129 @@ lambda_u = 0.5
 #Specify the type of regularization (can be changed to 1 to perform Lasso)
 p = 2
 
-n_samples = 10
 
 # Censoring time (10 years)
 censoring = 3652
 
 train_size = int(len(dataset) * 0.75)
-Bootstrap_p_Values = []
-Bootstrap_cindex = []
 
-for _ in tqdm(range(n_samples)):
 
-    # Split the data into training and test sets with replacement
-    train = resample(dataset, n_samples=train_size,
-                     replace=True, stratify=dataset[event])
-    
-    # Split the data into training and test sets
-    train_data = dataset.iloc[train.index]
-    train_data.reset_index(inplace=True, drop=True)
+# Split the data into training and test sets with replacement
+train = resample(dataset, n_samples=train_size,
+                 replace=True, stratify=dataset[event])
+train_data = dataset.iloc[train.index]
+train_data.reset_index(inplace=True, drop=True)
 
-    test_data = dataset.drop(train.index)
-    test_data.reset_index(inplace=True, drop=True)
-    
-    # split the data into covariates, duration time, and events
+test_data = dataset.drop(train.index)
+test_data.reset_index(inplace=True, drop=True)
 
-    T_train = np.array(train_data.loc[:, time])
-    E_train = np.array(train_data.loc[:, event])
-    X_train = np.array(train_data.drop([time, event], axis=1))
-    
-    # #Censoring
-    E_train[T_train>censoring]=0
-    T_train[T_train>censoring]=censoring
-    
-    
-    # Test data
-    E_test = np.array(test_data.loc[:, event])
-    T_test = np.array(test_data.loc[:, time])
-    X_test = np.array(test_data.drop([time, event], axis=1))
-    
-    scaler = StandardScaler()
-    scaler.fit(X_train)
-    X_train=scaler.transform(X_train)
-    X_test=scaler.transform(X_test)
-    
+# split the data into covariates, duration time, and events
+
+T_train = np.array(train_data.loc[:, time])
+E_train = np.array(train_data.loc[:, event])
+X_train = np.array(train_data.drop([time, event], axis=1))
+
+# #Censoring
+E_train[T_train>censoring]=0
+T_train[T_train>censoring]=censoring
+
+
+# Test data
+E_test = np.array(test_data.loc[:, event])
+T_test = np.array(test_data.loc[:, time])
+X_test = np.array(test_data.drop([time, event], axis=1))
+
+scaler = StandardScaler()
+scaler.fit(X_train)
+X_train=scaler.transform(X_train)
+X_test=scaler.transform(X_test)
+
  
-    
-    # ------------------Run Transductive Learning--------------
 
-    #initialize the model
-    tsr_model = TSR(lambda_w=lambda_w, lambda_u=lambda_u, p=p, Tmax=2000, lr=1e-4)
+# ------------------Run Transductive Learning--------------
 
-    # Fit the model to the training set
-    tsr_model.fit(X_train, T_train, E_train, X_test)
-    
-    # Get test set predictions and calculate the concordance index
-    Z_test = tsr_model.decision_function(X_test)
-    Bootstrap_cindex.append(cindex(T_test, Z_test, E_test*(T_test < censoring)))
+#initialize the model
+tsr_model = TSR(lambda_w=lambda_w, lambda_u=lambda_u, p=p, Tmax=2000, lr=1e-4)
 
-    threshold = 0
+# Fit the model to the training set
+tsr_model.fit(X_train, T_train, E_train, X_test)
 
-    #Split into high/low risk groups based on the prediction score
-    Results_df = pd.DataFrame(
-        {'Prediction': Z_test, 'Time': T_test, 'Event': E_test})
-    low_group = Results_df[Results_df['Prediction'] <= threshold]
-    high_group = Results_df[Results_df['Prediction'] > threshold]
+# Get test set predictions and calculate the concordance index
+Z_test = tsr_model.decision_function(X_test)
+c_index=cindex(T_test, Z_test, E_test*(T_test < censoring))
+print("\nTSR c-index: %.2f" % c_index)
 
-    #logrank test to calculate significance
-    results = logrank_test(low_group['Time'], high_group['Time'], event_observed_A=low_group['Event'],
-                               event_observed_B=high_group['Event'])
-    Bootstrap_p_Values.append(results.p_value)
 
-    
+#%%
 
-#Calculate evaluation metrics
+#----------------KM curves and significance----------------
 
-mean_score_Tsr = np.mean(Bootstrap_cindex)
-std_score_Tsr = np.std(Bootstrap_cindex)
-combined_p=2*np.median(Bootstrap_p_Values)
+from lifelines import KaplanMeierFitter
+from lifelines.plotting import add_at_risk_counts
 
-print("\nTSR Mean ,SD,2p50:\n")
-print("Mean c-index: %.2f" % mean_score_Tsr)
-print("Standardd deviation of c-index: %.2f" % std_score_Tsr)
-print("Combined p-Value: %.4f" % combined_p)
+threshold = 0
 
+#Split into high/low risk groups based on the prediction score
+Results_df = pd.DataFrame(
+    {'Prediction': Z_test, 'Time': T_test, 'Event': E_test})
+low_group = Results_df[Results_df['Prediction'] <= threshold]
+high_group = Results_df[Results_df['Prediction'] > threshold]
+
+#logrank test to calculate significance
+results = logrank_test(low_group['Time'], high_group['Time'], event_observed_A=low_group['Event'],
+                           event_observed_B=high_group['Event'])
+
+
+print("TSR p-value: %.4f" % results.p_value)
+
+
+high_T = high_group['Time']
+high_E =  high_group['Event']
+
+low_T = low_group['Time']
+low_E =  low_group['Event']
+
+
+#Censoring
+high_E[high_T>censoring]=0
+high_T[high_T>censoring]=censoring
+low_E[low_T>censoring]=0
+low_T[low_T>censoring]=censoring
+
+
+km_high = KaplanMeierFitter()
+km_low = KaplanMeierFitter()
+
+# Fitting the model 
+
+ax = plt.subplot(111)
+ax = km_high.fit(high_T, event_observed=high_E, label = 'Low Risk').plot_survival_function(ax=ax)
+ax = km_low.fit(low_T, event_observed=low_E, label = 'High Risk').plot_survival_function(ax=ax)
+
+add_at_risk_counts(km_high, km_low, ax=ax)
+plt.title('Kaplan-Meier estimate \n')
+plt.ylabel('Survival probability')
+plt.show()
+plt.tight_layout()
+
+#%%
+
+#----------------Distrobution of Predections----------------
+
+plt.figure(figsize=(8,6))
+plt.style.use('seaborn-whitegrid')
+
+plt.hist(low_group['Prediction'], bins=25, facecolor = '#4890c1', edgecolor='#aabbcc', linewidth=0.5,label=('Low Risk'))
+plt.hist(high_group['Prediction'], bins=25, facecolor = '#ecac7c', edgecolor='#fb9942', linewidth=0.5,label=('High Risk'))
+plt.title('TSR Prediction Scores',fontsize=16) 
+plt.xlabel('Prediction Value',fontsize=16) 
+plt.ylabel('Count',fontsize=16)
+plt.legend(fontsize=12)
+plt.show()
+
+
+#%%
+
+import seaborn as sns
+import matplotlib.pyplot as plt
 
