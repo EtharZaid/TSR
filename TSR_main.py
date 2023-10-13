@@ -175,6 +175,29 @@ plt.show()
 
 #%%
 
+#----------------Heatmap of gene expressions----------------
+
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+#Plot the heatmap for gene expressions for low(blue) vs high(orange) risk groups
+
+heatmap_df = pd.DataFrame(test_data)
+heatmap_df['Prediction']=Z_test
+heatmap_df['Risk']=heatmap_df['Prediction'].apply(lambda x: 1 if x>0 else 0)
+heatmap_df.sort_values(by=['Risk'],inplace=True)
+heatmap_df.drop([time,event,'Prediction'],inplace=True,axis=1)
+
+
+gene_heatmap=sns.clustermap(heatmap_df.drop(['Risk'],axis=1).T,
+                col_colors = heatmap_df.iloc[:,559].T.replace({0:'#4890c1',1:'#ecac7c'}),
+                col_cluster=False,
+                row_cluster=True,
+                cmap='seismic',vmin=-2,vmax=2,
+                colors_ratio=0.02) 
+
+
+gene_heatmap.ax_row_dendrogram.set_visible(False)
+gene_heatmap.ax_heatmap.set_xticks([])
+
+plt.show()
