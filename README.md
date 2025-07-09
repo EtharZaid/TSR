@@ -1,6 +1,5 @@
 # A Transductive Approach to Survival Ranking for Cancer Risk Stratification
-### Ethar Alzaid, Muhammad Dawood* and Fayyaz Minhas
-### Tissue Image Analytics Center, University of Warwick, United Kingdom
+
 
 This repository contains the code for the following manuscripts:
 
