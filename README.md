@@ -1,4 +1,4 @@
-# A Transductive Approach to Survival Ranking for Cancer Risk Stratification
+# TSR: Transductive Survival Ranking for Cancer Risk Stratification
 
 
 This repository contains the code for the following manuscripts:
