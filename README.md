@@ -2,14 +2,16 @@
 ### Ethar Alzaid, Muhammad Dawood* and Fayyaz Minhas
 ### Tissue Image Analytics Center, University of Warwick, United Kingdom
 
-This repository contains the code for the following manuscript:
+This repository contains the code for the following manuscripts:
 
-A Transductive Approach to Survival Ranking for Cancer Risk Stratification, submitted to The 18th Machine Learning in Computational Biology (MLCB2023) for review.
+A Transductive Approach to Survival Ranking for Cancer Risk Stratification, in The 18th Machine Learning in Computational Biology (MLCB2023).
+Transductive Survival Ranking for Pan-cancer Automatic Risk Stratification using Whole Slide Images, in The 29th Medical Image Understanding and Analysis (MIUA2025).
+
 
 ## Introduction
-How can we stratify patients into subgroups based on their expected survival in a purely data-driven manner? Identifying cancer patients at higher risk is crucial in planning personalized treatment to improve patient survival outcomes. The main challenge with existing approaches is the underlying complexity of handling censoring in the survival data and manually setting a precise threshold to stratify patients into risk groups. In this paper, a Transductive Survival Ranking (TSR) model for patient risk stratification is proposed. The model handles samples in pairs to make use of instances with censored survival information. It incorporates unlabeled test samples in the training process to maximize the margin between their predicted survival scores resulting in automatic patient stratification into subgroups without the need for any additional post-processing or manual threshold selection. The model was evaluated on several datasets with varying sets of covariates, and all stratification were significant (p <<0.05) with high concordance indices of up to 0.78 in Disease Specific Survival and 0.75 in Overall Survival.
+How can we stratify patients into meaningful risk groups by leveraging data from both patients with known survival times and event indicators and those without, while requiring no manual post-hoc thresholding of predicted risk scores? Existing survival stratification methods in computa-tional pathology train a supervised model on patients with known survival times and event indicators, then apply it to a test set to generate risk scores. These scores are typically thresholded, often at the median, to assign pa-tients to high- or low-risk groups. Such inductive pipelines overlook the large pool of unlabelled patients even though number of cases with known survival times are typically limited and observed events are even rarer. As a result, existing methods often fail to uncover meaningful risk groups. In this work, we introduce Transductive Survival Ranking (TSR) model, designed to leverage both labelled and unlabelled data for improved survival prediction. Given a dataset where only a subset of samples have associated survival time and event information, our approach (1) ranks patients by predicted survival times, (2) automatically discovers risk groups without requiring manual thresholding, and (3) transduces differential survival patterns from patients with observed events to those without events. 
 
-<img src="concept1.png" alt="Concept Diagram"/>
+<img src="TSR_overview.png" alt="Concept Diagram"/>
 
 ## Dependencies
 
