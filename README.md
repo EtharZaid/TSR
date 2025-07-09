@@ -46,6 +46,9 @@ Python Version== 3.7.16
 ### Data download
 A sample file for BRCA is included in the Dataset folder with a separate file for survival information.
 This was downloaded from TCGA on cBioPortal (https://www.cbioportal.org/), the gene expressions can be directly downloaded with z-score normalization.
+We have included WSI embeddings for TCGA-BRCA generated using [TITAN](https://github.com/TencentAILabHealthcare/TITAN) in the `Dataset` folder.
+
+
 
 ### Single Run
 In [TSR_main](TSR_main.py) (to be updated), you will be able to run the transductive survival ranking to stratify samples into low vs. high risk groups:
