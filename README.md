@@ -3,7 +3,7 @@
 
 This repository contains the code for the following papers:
 
-A Transductive Approach to Survival Ranking for Cancer Risk Stratification, in The 18th Machine Learning in Computational Biology (MLCB2023) [1](https://proceedings.mlr.press/v240/alzaid24a.html#:~:text=It%20incorporates%20unlabeled%20test%20samples,processing%20or%20manual%20threshold%20selection.).
+A Transductive Approach to Survival Ranking for Cancer Risk Stratification, in The 18th Machine Learning in Computational Biology (MLCB2023) [[Link](https://proceedings.mlr.press/v240/alzaid24a.html#:~:text=It%20incorporates%20unlabeled%20test%20samples,processing%20or%20manual%20threshold%20selection.)].
 
 Transductive Survival Ranking for Pan-cancer Automatic Risk Stratification using Whole Slide Images, in The 29th Medical Image Understanding and Analysis (MIUA2025).
 
