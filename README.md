@@ -4,6 +4,7 @@
 This repository contains the code for the following manuscripts:
 
 A Transductive Approach to Survival Ranking for Cancer Risk Stratification, in The 18th Machine Learning in Computational Biology (MLCB2023).
+
 Transductive Survival Ranking for Pan-cancer Automatic Risk Stratification using Whole Slide Images, in The 29th Medical Image Understanding and Analysis (MIUA2025).
 
 
@@ -44,7 +45,7 @@ Python Version== 3.7.16
 
 ## Usage
 ### Data download
-A sample file for BRCA is included in the Dataset folder with a separate file for survival information.
+A sample file for BRCA is included in the `Dataset` folder with a separate file for survival information.
 This was downloaded from TCGA on cBioPortal (https://www.cbioportal.org/), the gene expressions can be directly downloaded with z-score normalization.
 We have included WSI embeddings for TCGA-BRCA generated using [TITAN](https://github.com/TencentAILabHealthcare/TITAN) in the `Dataset` folder.
 
